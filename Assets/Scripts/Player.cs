@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
+using static UnityEngine.RuleTile.TilingRuleOutput;
 
 public class Player : Character
 {
@@ -19,6 +20,7 @@ public class Player : Character
 
     private Vector3 axeOffSet;
     private Vector2 throwDirection;
+    private float spinDamageDelay = 2f;
 
     private void Start()
     {
@@ -34,6 +36,11 @@ public class Player : Character
     }
     void Update()
     {
+        if (Input.GetKey(KeyCode.Space))
+            this.Spin();
+        else if (Input.GetKeyUp(KeyCode.Space))
+            animator.SetBool("isSpinning", false);
+
         this.MoveTo(new Vector3());
 
         if (AnyArrowDown() && lastAttack > attackDelay)
@@ -42,6 +49,7 @@ public class Player : Character
             animator.SetTrigger("Attack");
         }
 
+        spinDamageDelay += Time.deltaTime;
         lastAttack += Time.deltaTime;
     }
 
@@ -78,12 +86,34 @@ public class Player : Character
         lastAttack = 0;
     }
 
+    private void Spin()
+    {
+        animator.SetBool("isSpinning", true);
+
+        Collider2D[] enemies = Physics2D.OverlapCircleAll(transform.position, spriteRenderer.size.x, LayerMask.GetMask("Enemies"));
+
+        foreach (Collider2D enemyCollider in enemies)
+        {
+            Rigidbody2D enemyRigidbody = enemyCollider.attachedRigidbody;
+
+            if (enemyRigidbody != null){
+                Vector2 direction = (enemyCollider.transform.position - transform.position).normalized;
+
+                enemyRigidbody.AddForce(direction, ForceMode2D.Impulse);
+
+                if (spinDamageDelay > 2){
+                    enemyCollider.gameObject.GetComponent<Character>().TakeDamage(strength);
+                    spinDamageDelay = 0;
+                }
+            }
+        }
+    }
+
     private void ThrowAxe()
     {
         GameObject handAxe = Instantiate(handAxePrefab, axeOffSet, transform.rotation);
-
         if (Input.GetKey(KeyCode.LeftArrow))
-            handAxe.GetComponent<SpriteRenderer>().flipX = true;
+                handAxe.GetComponent<SpriteRenderer>().flipX = true;
 
         handAxe.GetComponent<Handaxe>().SetDamage(this.strength);
         Rigidbody2D axeRb = handAxe.GetComponent<Rigidbody2D>();
@@ -126,7 +156,6 @@ public class Player : Character
 
     private void Die()
     {
-        //Time.timeScale = 0;
         animator.SetTrigger("Dead");
         this.GetComponent<Rigidbody2D>().Sleep();
         this.boxCollider.enabled = false;
