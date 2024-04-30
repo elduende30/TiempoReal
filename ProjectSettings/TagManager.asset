@@ -5,7 +5,7 @@ TagManager:
   serializedVersion: 2
   tags:
   - Handaxe
-  - Bomb
+  - charco
   layers:
   - Default
   - TransparentFX
@@ -16,7 +16,7 @@ TagManager:
   - Objects
   - Walls
   - Enemies
-  - Traps
+  - 
   - 
   - 
   - 
@@ -54,4 +54,7 @@ TagManager:
     locked: 0
   - name: Enemies
     uniqueID: 3671852405
+    locked: 0
+  - name: UI
+    uniqueID: 2597987673
     locked: 0
