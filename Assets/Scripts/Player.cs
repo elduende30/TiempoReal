@@ -126,8 +126,11 @@ public class Player : Character
 
     private void Die()
     {
-        Time.timeScale = 0;
-        Destroy(this.gameObject);
+        //Time.timeScale = 0;
+        animator.SetTrigger("Dead");
+        this.GetComponent<Rigidbody2D>().Sleep();
+        this.boxCollider.enabled = false;
+        this.enabled = false;
     }
 
 
