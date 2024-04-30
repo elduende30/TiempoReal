@@ -8,7 +8,7 @@ public class CanonShooter : MonoBehaviour
     public Transform firePoint; // El punto desde donde se dispara la bala
     public float fireRate = 1.0f; // Intervalo entre disparos
     public float bulletSpeed = 10.0f; // Velocidad inicial de la bala
-    public float raycastRange = 50.0f; // Rango del raycast
+    public float bulletLifetime = 5.0f; // Tiempo después del cual la bala desaparece
     public LayerMask targetLayer; // Capas a las que reaccionará el raycast
 
     private float nextFireTime = 0.0f; // Tiempo para el próximo disparo
@@ -17,7 +17,7 @@ public class CanonShooter : MonoBehaviour
     {
         if (Time.time >= nextFireTime)
         {
-            if (Shoot()) // Disparar una bala si el raycast no golpea un obstáculo
+            if (Shoot()) // Disparar la bala si el raycast no golpea un obstáculo
             {
                 nextFireTime = Time.time + fireRate; // Configurar el tiempo del próximo disparo
             }
@@ -26,31 +26,24 @@ public class CanonShooter : MonoBehaviour
 
     bool Shoot()
     {
-        // Realizar el raycast
-        RaycastHit hit;
-        if (Physics.Raycast(firePoint.position, firePoint.forward, out hit, raycastRange, targetLayer))
-        {
-            // Si golpea un objetivo, podemos hacer algo aquí
-            Debug.Log($"Hit {hit.collider.gameObject.name} at distance {hit.distance}");
-
-            // Opcionalmente, puedes destruir el objetivo o realizar otra acción
-            // Destroy(hit.collider.gameObject);
-
-            return false; // No disparamos la bala porque golpeó algo
-        }
-
-        // Si no golpea nada, disparamos la bala
+        // Disparar la bala directamente, sin chequear raycast
         GameObject bullet = Instantiate(bulletPrefab, firePoint.position, firePoint.rotation);
         Rigidbody rb = bullet.GetComponent<Rigidbody>();
 
         if (rb != null)
         {
+            rb.useGravity = false; // Asegurarse de que la bala no sea afectada por la gravedad
             rb.velocity = firePoint.forward * bulletSpeed; // Mover la bala hacia adelante
         }
+
+        // Destruir la bala después de un tiempo específico
+        Destroy(bullet, bulletLifetime);
 
         return true; // Disparo exitoso
     }
 }
+
+
 
 
 
