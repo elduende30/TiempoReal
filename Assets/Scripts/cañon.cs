@@ -4,44 +4,52 @@ using UnityEngine;
 
 public class CanonShooter : MonoBehaviour
 {
-    public GameObject bulletPrefab; // El prefab de la bala
-    public Transform firePoint; // El punto desde donde se dispara la bala
-    public float fireRate = 1.0f; // Intervalo entre disparos
-    public float bulletSpeed = 10.0f; // Velocidad inicial de la bala
-    public float bulletLifetime = 5.0f; // Tiempo después del cual la bala desaparece
-    public LayerMask targetLayer; // Capas a las que reaccionará el raycast
+    public GameObject bulletPrefab;
+    public Transform firePoint;
+    public float fireRate = 1.0f;
+    public float bulletSpeed = 10.0f;
+    public float bulletLifetime = 5.0f;
+    public LayerMask obstacleLayer;
+    public float maxRayDistance = 100.0f;
 
-    private float nextFireTime = 0.0f; // Tiempo para el próximo disparo
+    private float nextFireTime = 0.0f;
 
     void Update()
     {
-        if (Time.time >= nextFireTime)
+        if (Time.time >= nextFireTime && IsPathClear())
         {
-            if (Shoot()) // Disparar la bala si el raycast no golpea un obstáculo
-            {
-                nextFireTime = Time.time + fireRate; // Configurar el tiempo del próximo disparo
-            }
+            Shoot();
+            nextFireTime = Time.time + fireRate;
         }
     }
 
-    bool Shoot()
+    bool IsPathClear()
     {
-        // Disparar la bala directamente, sin chequear raycast
-        GameObject bullet = Instantiate(bulletPrefab, firePoint.position, firePoint.rotation);
-        Rigidbody rb = bullet.GetComponent<Rigidbody>();
+        RaycastHit hit;
+        bool pathClear = !Physics.Raycast(firePoint.position, firePoint.forward, out hit, maxRayDistance, obstacleLayer);
+        return pathClear;
+    }
 
-        if (rb != null)
+    void Shoot()
+    {
+        GameObject bullet = Instantiate(bulletPrefab, firePoint.position, firePoint.rotation);
+
+        Rigidbody rb = bullet.GetComponent<Rigidbody>();
+        if (rb == null)
         {
-            rb.useGravity = false; // Asegurarse de que la bala no sea afectada por la gravedad
-            rb.velocity = firePoint.forward * bulletSpeed; // Mover la bala hacia adelante
+            Debug.LogError("Rigidbody no encontrado en la bala!");
+            return;
         }
 
-        // Destruir la bala después de un tiempo específico
-        Destroy(bullet, bulletLifetime);
+        rb.useGravity = false; // Asegúrate de que no se vea afectado por la gravedad
+        rb.velocity = firePoint.forward * bulletSpeed; // Asigna velocidad hacia adelante
 
-        return true; // Disparo exitoso
+        Debug.Log($"Disparando bala con velocidad: {rb.velocity}");
+
+        Destroy(bullet, bulletLifetime);
     }
 }
+
 
 
 
