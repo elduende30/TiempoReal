@@ -4,25 +4,28 @@ using System.Linq;
 using Unity.VisualScripting;
 using UnityEngine;
 
-public class Guard : Character
+public class Skeleton : Character
 {
     private Vector3 patrolPosition;
     private Player player;
 
-    private float range = 5f;
-    private float attackRange = 1f;
+    private float visionRange = 5f;
+    private float attackRange = 1.5f;
 
     private bool stunned = false;
+    private bool alive = true;
 
     private Rigidbody2D rb;
+    private Animator animator;
     private Vector2 throwDirection = Vector2.down;
 
     private void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+        animator = GetComponent<Animator>();
         patrolPosition = this.transform.position;
         speed = 2f;
-        attackDelay = 1.5f;
+        attackDelay = 3f;
         lastAttack = 0f;
         life = 50;
         strength = 10;
@@ -30,15 +33,20 @@ public class Guard : Character
 
     private void Update()
     {
-        if (stunned)
+        if (stunned || !alive)
             return;
 
         Transform playerFound = this.SearchForPlayer();
 
         if (playerFound != null)
         {
-            player = playerFound.gameObject.GetComponent<Player>();
-            this.MoveTo(playerFound.position);
+            if (Vector3.Distance(this.transform.position, playerFound.position) < attackRange)
+                this.Attack();
+            else
+            {
+                player = playerFound.gameObject.GetComponent<Player>();
+                this.MoveTo(playerFound.position);
+            }
         }
         else if (this.transform.position.x == patrolPosition.x)
             this.Patrol();
@@ -49,7 +57,7 @@ public class Guard : Character
     }
     private Transform SearchForPlayer()
     {
-        Collider2D player = Physics2D.OverlapCircle(transform.position, range, LayerMask.GetMask("Player"));
+        Collider2D player = Physics2D.OverlapCircle(transform.position, visionRange, LayerMask.GetMask("Player"));
 
         if (player)
             return player.transform;
@@ -58,8 +66,12 @@ public class Guard : Character
     }
     protected override void Attack()
     {
-        player.TakeDamage(this.strength);
-        lastAttack = 0f;
+        if (lastAttack > attackDelay)
+        {
+            animator.SetTrigger("Attack");
+            player.TakeDamage(this.strength);
+            lastAttack = 0f;
+        }
     }
 
     private void Patrol()
@@ -74,39 +86,51 @@ public class Guard : Character
 
     protected override void MoveTo(Vector3 direction)
     {
+        this.LookInDirection(direction);
+
         transform.position = Vector2.MoveTowards(transform.position, direction, speed * Time.deltaTime);
-        
-        if (Vector2.Distance(this.transform.position, direction) <= attackRange && lastAttack > attackDelay)
-            this.Attack();
     }
     private void ReturnToPatrol()
     {
+        this.LookInDirection(patrolPosition);
+
         transform.position = Vector2.MoveTowards(transform.position, patrolPosition, speed * Time.deltaTime);
+    }
+
+    private void LookInDirection(Vector3 direction)
+    {
+        if (this.transform.InverseTransformPoint(direction).x < 0f)
+            this.GetComponent<SpriteRenderer>().flipX = true;
+        else
+            this.GetComponent<SpriteRenderer>().flipX = false;
     }
 
     public override void TakeDamage(int damage)
     {
+        if (!alive)
+            return;
+
         this.StartCoroutine(Stun());
         this.life -= damage;
-        
-        if(this.life <= 0)
-            Destroy(gameObject);
+
+        if (this.life <= 0)
+        {
+            alive = false;
+            animator.SetTrigger("Dead");
+
+            this.rb.Sleep();
+            this.GetComponent<BoxCollider2D>().enabled = false;
+            this.enabled = false;
+        }
     }
 
     private IEnumerator Stun()
     {
         this.stunned = true;
-        //visual feedback de cuando esta stunned
+        animator.SetTrigger("Hit");
         yield return new WaitForSeconds(0.1f);
 
         this.stunned = false;
     }
-
-    private void OnCollisionEnter2D(Collision2D collision)
-    {
-        if (collision != null && collision.gameObject.layer == 3)
-            collision.gameObject.GetComponent<Player>().TakeDamage(this.strength);        
-    }
-
 
 }
